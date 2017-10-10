@@ -43,7 +43,7 @@
 //#include <TimeLib.h>                  // Library for converting epochtime to a date
 //#include <WiFiUdp.h>                  // Library for manipulating UDP packets which is used by NTP Client to get Timestamps
 
-#define FW_VERSION_STRING "v0.5"
+#define FW_VERSION_STRING "v1.0alpha"
 
 // Variables for whole scope
 String filename = "/P/";
@@ -117,7 +117,7 @@ void setup() {
   */
 
   //set up event handlers...
-    static WiFiEventHandler e1, e2;
+  static WiFiEventHandler e1, e2;
   e1 = WiFi.onStationModeGotIP(onSTAGotIP);
   e2 = WiFi.onStationModeDisconnected(onSTADisconnected);
   
@@ -850,8 +850,8 @@ bool loadConfiguration() {
   //request url format: http://esp.ip/vcard?uid=<uid_from_db>
   server.on("/vcard", HTTP_GET, [](AsyncWebServerRequest *request){
 
-    if  (!request->authenticate("admin", adminpwd))
-      return request->requestAuthentication();
+//    if  (!request->authenticate("admin", adminpwd))
+//      return request->requestAuthentication();
       
     if (request->params() == 1){
       AsyncWebParameter* p_uid = request->getParam(0);

@@ -1,10 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.0alpha] - 2014-10-10
+First prodcution release
+
+
 ## [0.5] - 2014-10-10
 - imporved handling ot power outages and WiFi AP outages
 - added support of virtual access cards thourgh http GET request
 - added audibale signal for accesss granted/rejected
+- guard time between two consequitive access commands
 
 
 
