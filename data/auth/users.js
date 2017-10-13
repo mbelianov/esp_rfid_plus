@@ -17,6 +17,7 @@ function listSCAN(obj) {
     document.getElementById("picctype").value = obj.type;
     document.getElementById("username").value = obj.user;
     document.getElementById("acctype").value = obj.acctype;
+    document.getElementById("vcard").value = "http://"+window.location.hostname+"/vcard?uid="+obj.uid;
   }
 }
 
@@ -55,7 +56,9 @@ function initTable() {
             "title": "Access Type",
             "breakpoints": "xs",
             "parser": function(value) {
-              if (value === 1) {
+              if (value === 2) {
+                return "Active, virtual";
+              } else if (value === 1) {
                 return "Active";
               } else {
                 return "Disabled";
@@ -85,16 +88,19 @@ function initTable() {
           editRow: function(row) {
             var acctypefinder;
             var values = row.val();
-            if (values.acctype == "Active") {
-    acctypefinder = 1;
-  }
-  else {
-    acctypefinder = 0;
-  }
+            if (values.acctype == "Active, virtual") {
+              acctypefinder = 2;
+            } else if (values.acctype == "Active") {
+              acctypefinder = 1;
+            }
+            else {
+              acctypefinder = 0;
+            }
             $editor.find('#uid').val(values.uid);
             $editor.find('#username').val(values.username);
             $editor.find('#acctype').val(acctypefinder);
             $editor.find('#validuntil').val(values.validuntil);
+            $editor.find('#vcard').val("http://"+window.location.hostname+"/vcard?uid="+values.uid);
             $modal.data('row', row);
             $editorTitle.text('Edit User # ' + values.username);
             $modal.modal('show');
@@ -107,7 +113,7 @@ function initTable() {
               websock.send(jsontosend);
               row.delete();
             }
-          }
+          }          
         },
         components: {
           filtering: FooTable.MyFiltering
@@ -147,17 +153,20 @@ function initTable() {
 }
 
 function acctypefinder() {
-  if (values.acctype === "Active") {
+  if (values.acctype === "Active, virtual") {
+    return 2;
+  }else if (values.acctype === "Active") {
     return 1;
-  }
-  else {
+  }else {
     return 0;
   }
 }
 
 function acctypeparser(){
   var $editor = $('#editor');
-  if($editor.find('#acctype option:selected').val() == 1){
+  if($editor.find('#acctype option:selected').val() == 2){
+    return "Active, virtual";
+  }else if($editor.find('#acctype option:selected').val() == 1){
     return "Active";
   } else {
     return "Disabled";
@@ -174,8 +183,8 @@ function twoDigits(value) {
 FooTable.MyFiltering = FooTable.Filtering.extend({
   construct: function(instance) {
     this._super(instance);
-    this.acctypes = ['1', '0'];
-    this.acctypesstr = ['Active', 'Disabled'];
+    this.acctypes = ['2', '1', '0'];
+    this.acctypesstr = ['Active, virtual', 'Active', 'Disabled'];
     this.def = 'Access Type';
     this.$acctype = null;
   },

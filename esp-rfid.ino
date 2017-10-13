@@ -62,6 +62,7 @@ int activateTime;
 int timeZone;
 int blinker = 10;
 char adminpwd[11];
+char vcardpwd[11];
 //String nonce;
 //time_t nonce_validity;
 //const int nonce_validity_period = 10;
@@ -95,7 +96,6 @@ void onSTADisconnected(WiFiEventStationModeDisconnected event_info) {
   Serial.println(event_info.ssid.c_str());
   Serial.print(F("[ INFO ] Reason: "));
   Serial.println(event_info.reason);
-  Serial.print(F("[ INFO ] Activating AP!"));
   blinker = 8;
 }
 
@@ -133,7 +133,7 @@ void setup() {
 
   // Configure web server
   // Add Text Editor (http://esp-rfid.local/edit) to Web Server. This feature likely will be dropped on final release.
-  server.addHandler(new SPIFFSEditor("admin", "changa"));
+  server.addHandler(new SPIFFSEditor("admin", adminpwd));
 
 
   // Serve all files in root folder
@@ -143,36 +143,52 @@ void setup() {
   // Handle what happens when requested web file couldn't be found
   server.onNotFound([](AsyncWebServerRequest * request) {
     AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
-    response->addHeader("Location", "http://192.168.4.1");
+    response->addHeader("Location", inAPMode?"http://192.168.4.1":(String("http://") + WiFi.localIP()));
     request->send(response);
   });
 
+  static bool authenticated = false;
   // Simple Firmware Update Handler
-  server.on("/auth/update", HTTP_POST, [](AsyncWebServerRequest * request) {
-    shouldReboot = !Update.hasError();
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
-    response->addHeader("Connection", "close");
-    request->send(response);
-  }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-    if (!index) {
-      Serial.printf("[ UPDT ] Firmware update started: %s\n", filename.c_str());
-      Update.runAsync(true);
-      if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-        Update.printError(Serial);
-      }
-    }
-    if (!Update.hasError()) {
-      if (Update.write(data, len) != len) {
-        Update.printError(Serial);
-      }
-    }
-    if (final) {
-      if (Update.end(true)) {
-        Serial.printf("[ UPDT ] Firmware update finished: %uB\n", index + len);
-      } else {
-        Update.printError(Serial);
-      }
-    }
+  server.on("/auth/update", HTTP_POST, 
+    [](AsyncWebServerRequest * request) {
+        if  (!authenticated)
+          return request->requestAuthentication();
+       
+        shouldReboot = !Update.hasError();
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
+        response->addHeader("Connection", "close");
+        request->send(response);    
+    }, 
+    
+    [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+       
+       if (!index) {      
+          authenticated = request->authenticate("admin", adminpwd);
+          if(!authenticated){
+            Serial.println(F("Unauthenticated Update!"));
+            return;
+          }
+ 
+          Serial.print(F("[ UPDT ] Firmware update started: "));
+          Serial.println(filename.c_str());
+          Update.runAsync(true);
+          if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
+            Update.printError(Serial);
+          }
+        }
+        if (authenticated && !Update.hasError()) {
+          if (Update.write(data, len) != len) {
+            Update.printError(Serial);
+          }
+        }
+        if (authenticated && final) {
+          if (Update.end(true)) {
+            Serial.print(F("[ UPDT ] Update finished. Bytes uploaded: "));
+            Serial.println(index + len);
+          } else {
+            Update.printError(Serial);
+          }
+        }
   });
 
 
@@ -264,100 +280,6 @@ void rfidloop() {
   String type = mfrc522.PICC_GetTypeName(piccType);
 
   checkUID(uid, type);
-
-//  // We are going to use filesystem to store known UIDs.
-//  // If we know the PICC we need to know if its User have an Access
-//  int AccType = 0;  // First assume User do not have access
-//  // Prepend /P/ on filename so we distinguish UIDs from the other files
-//  filename = "/P/";
-//  filename += uid;
-//
-//  File f = SPIFFS.open(filename, "r");
-//  // Check if we could find it above function returns true if the file is exist
-//  if (f) {
-//    // Now we need to read contents of the file to parse JSON object contains Username and Access Status
-//    size_t size = f.size();
-//    // Allocate a buffer to store contents of the file.
-//    std::unique_ptr<char[]> buf(new char[size]);
-//    // We don't use String here because ArduinoJson library requires the input
-//    // buffer to be mutable. If you don't use ArduinoJson, you may as well
-//    // use configFile.readString instead.
-//    f.readBytes(buf.get(), size);
-//    DynamicJsonBuffer jsonBuffer;
-//    JsonObject& json = jsonBuffer.parseObject(buf.get());
-//    // Check if we succesfully parse JSON object
-//    if (json.success()) {
-//      // Get username Access Status
-//      String username = json["user"];
-//      AccType = json["acctype"];
-//      Serial.println(" = known PICC");
-//      Serial.print("[ INFO ] User Name: ");
-//      Serial.print(username);
-//      // Check if user have an access
-//      if (AccType == 1) {
-//        activateRelay = true;  // Give user Access to Door, Safe, Box whatever you like
-//        {
-//          activateZummer = true;
-//          digitalWrite(zummerPin, LOW);
-//          zummerTime = 25;      // short beep
-//        }
-//        previousMillis = millis();
-//        Serial.println(" have access");
-//      }
-//      else {
-//        Serial.println(" does not have access");
-//        activateZummer = true;
-//        digitalWrite(zummerPin, LOW);
-//        zummerTime = 500;      // long beep
-//        previousMillis = millis();
-//      }
-//      LogLatest(uid, username);
-//      // Also inform Administrator Portal
-//      // Encode a JSON Object and send it to All WebSocket Clients
-//      DynamicJsonBuffer jsonBuffer2;
-//      JsonObject& root = jsonBuffer2.createObject();
-//      root["command"] = "piccscan";
-//      // UID of Scanned RFID Tag
-//      root["uid"] = uid;
-//      // Type of PICC
-//      root["type"] = type;
-//      root["known"] = 1;
-//      root["acctype"] = AccType;
-//      // Username
-//      root["user"] = username;
-//      size_t len = root.measureLength();
-//      AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-//      if (buffer) {
-//        root.printTo((char *)buffer->get(), len + 1);
-//        ws.textAll(buffer);
-//      }
-//    }
-//    else {
-//      Serial.println("");
-//      Serial.println(F("[ WARN ] Failed to parse User Data"));
-//    }
-//    f.close();
-//  }
-//  else {
-//    // If we don't know the UID, inform Administrator Portal so admin can give access or add it to database
-//    LogLatest(uid, "Unknown");
-//    Serial.println(" = unknown PICC");
-//    DynamicJsonBuffer jsonBuffer;
-//    JsonObject& root = jsonBuffer.createObject();
-//    root["command"] = "piccscan";
-//    // UID of Scanned RFID Tag
-//    root["uid"] = uid;
-//    // Type of PICC
-//    root["type"] = type;
-//    root["known"] = 0;
-//    size_t len = root.measureLength();
-//    AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-//    if (buffer) {
-//      root.printTo((char *)buffer->get(), len + 1);
-//      ws.textAll(buffer);
-//    }
-//  }
-  // So far got we got UID of Scanned RFID Tag, checked it if it's on the database and access status, informed Administrator Portal
 }
 
 void checkUID(String uid, String type){
@@ -765,7 +687,11 @@ void fallbacktoAPMode() {
   IPAddress myIP = WiFi.softAPIP();
   Serial.print(F("[ INFO ] AP IP address: "));
   Serial.println(myIP);
-  server.serveStatic("/auth/", SPIFFS, "/auth/").setDefaultFile("users.htm").setAuthentication("admin", "changa");
+  strncpy(adminpwd, "changa", 10);
+  adminpwd[10] = 0;
+  strncpy(vcardpwd, "changa", 10);
+  vcardpwd[10] = 0;
+  server.serveStatic("/auth/", SPIFFS, "/auth/").setDefaultFile("users.htm").setAuthentication("admin", adminpwd);
 }
 
 
@@ -807,22 +733,27 @@ bool loadConfiguration() {
   int rfidgain = json["rfidgain"];
   Serial.println(F("[ INFO ] Trying to setup RFID Hardware"));
   setupRFID(rfidss, rfidgain);
+  Serial.println(F("[ INFO ] RFID Hardware setup completed"));
 
   const char * hstname = json["hostnm"];
   const char * bssidmac = json["bssid"];
   byte bssid[6];
   parseBytes(bssidmac, ':', bssid, 6, 16);
 
+  Serial.printf_P(PSTR("[ INFO ] Setting hostname: %s..."),hstname);
   // Set Hostname.
   WiFi.hostname(hstname);
-
+  Serial.printf_P(PSTR("done.\n"));
+  
+    
   // Start mDNS service so we can connect to http://esp-rfid.local (if Bonjour installed on Windows or Avahi on Linux)
   if (!MDNS.begin(hstname)) {
-    Serial.println("Error setting up MDNS responder!");
+    Serial.println(F("Error setting up MDNS responder!"));
   }
   // Add Web Server service to mDNS
   MDNS.addService("http", "tcp", 80);
-
+  
+  
   const char * ntpserver = json["ntpserver"];
   int ntpinter = json["ntpinterval"];
   timeZone = json["timezone"];
@@ -835,23 +766,39 @@ bool loadConfiguration() {
   pinMode(relayPin, OUTPUT);
   digitalWrite(relayPin, relayType);
 
+  
   const char * ssid = json["ssid"];
   const char * password = json["pswd"];
   int wmode = json["wmode"];
 
   const char * adminpass = json["adminpwd"];
-  strncpy(adminpwd, adminpass, 10);
+  if (adminpass)
+    strncpy(adminpwd, adminpass, 10);
+  else
+    adminpwd[0] = 0;
+    
   adminpwd[10] = 0;
+ 
+  const char * vcardpass = json["vcardpwd"];
+  if (vcardpass)
+    strncpy(vcardpwd, vcardpass, 10);
+  else
+    vcardpwd[0] = 0;
+
+  vcardpwd[10] = 0;
+  
 
   // Serve confidential files in /auth/ folder with a Basic HTTP authentication
   server.serveStatic("/auth/", SPIFFS, "/auth/").setDefaultFile("users.htm").setAuthentication("admin", adminpass);
   
   //handle virtual card request
   //request url format: http://esp.ip/vcard?uid=<uid_from_db>
+  //user: vcard; pass as defined insettings
   server.on("/vcard", HTTP_GET, [](AsyncWebServerRequest *request){
 
-//    if  (!request->authenticate("admin", adminpwd))
-//      return request->requestAuthentication();
+    if (vcardpwd[0])
+      if  (!request->authenticate("vcard", vcardpwd))
+        return request->requestAuthentication();
       
     if (request->params() == 1){
       AsyncWebParameter* p_uid = request->getParam(0);
@@ -904,12 +851,15 @@ void setupRFID(int rfidss, int rfidgain) {
 
 // Try to connect Wi-Fi
 bool connectSTA(const char* ssid, const char* password, byte bssid[6]) {
-  WiFi.mode(WIFI_STA);
-  // First connect to a wi-fi network
-  WiFi.begin(ssid, password, 0, bssid);
+  
   // Inform user we are trying to connect
   Serial.print(F("[ INFO ] Trying to connect WiFi: "));
   Serial.print(ssid);
+    
+  WiFi.mode(WIFI_STA);
+  // First connect to a wi-fi network
+  WiFi.begin(ssid, password, 0, bssid);
+
   // We try it for 20 seconds and give up on if we can't connect
   unsigned long now = millis();
   uint8_t timeout = 20; // define when to time out in seconds

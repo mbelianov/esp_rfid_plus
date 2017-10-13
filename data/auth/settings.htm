@@ -45,9 +45,21 @@
                     <td id="chip"></td>
                   </tr>
                   <tr>
+                    <th>FW Ver.</th>
+                    <td id="firmware"></td>
+                  </tr>   
+                  <tr>
+                    <th>Compiled at:</th>
+                    <td id="compile_time"></td>
+                  </tr>                   
+                  <tr>
                     <th>CPU Clock</th>
                     <td id="cpu"></td>
                   </tr>
+                  <tr>
+                    <th>Up time: </th>
+                    <td id="uptime"></td>
+                  </tr>                  
                   <tr>
                     <th>Free Heap</th>
                     <td>
@@ -68,15 +80,16 @@
                       </div>
                     </td>
                   </tr>
-                  				<tr>
- 					<th>Free SPIFFS</th>
- 					<td>			
- 					<div class='progress' style="margin-bottom: 0 !important;">
- 						<div id="spiffs" class="progress-bar progress-bar-primary" role="progressbar">
- 							Progress
- 						</div>
- 					</div></td>
- 			</tr>
+                  <tr>
+ 					          <th>Free SPIFFS</th>
+ 					          <td>			
+ 					            <div class='progress' style="margin-bottom: 0 !important;">
+ 						            <div id="spiffs" class="progress-bar progress-bar-primary" role="progressbar">
+ 							            Progress
+ 						            </div>
+ 					            </div>
+ 					          </td>
+ 			            </tr>
                 </table>
               </div>
             </div>
@@ -150,17 +163,17 @@
           </div>
           <div class="col-sm-6">
             <legend>Hardware Settings</legend>
-            <h6 class="text-muted">Please refer the <a href="https://github.com/omersiar/esp-rfid#pin-layout">documentation</a> for pin configuration.</h6>
+            <h6 class="text-muted">Please refer the <a href="https://github.com/omersiar/esp-rfid#pin-layout">documentation</a> for hardware settings explanation.</h6>
             <div class="row form-group">
               <label class="col-xs-3">SPI SS</label> 
               <span class="col-xs-9">
-                <select class="form-control input-sm" style="max-width:185px" id="gpioss">
+                <select class="form-control input-sm" style="max-width:185px" id="gpioss" disabled>
                   <option value="0">GPIO-0</option>
                   <option value="2">GPIO-2</option>
                   <option value="4">GPIO-4</option>
                   <option value="5">GPIO-5</option>
                   <option selected="selected" value="15">GPIO-15</option>
-                  <option value="16">GPIO-16</option>
+                  
                 </select>
               </span>
             </div>
@@ -182,7 +195,7 @@
             <div class="row form-group">
  						<label class="col-xs-3">Relay Type</label> 
  						<span class="col-xs-9">
- 						<select class="form-control input-sm" style="display:inline;max-width:185px" id="typerly">
+ 						<select class="form-control input-sm" style="display:inline;max-width:185px" id="typerly" disabled>
  							<option selected="selected" value="1">Active High</option>
  							<option value="0">Active Low</option>
  						</select>
@@ -191,13 +204,13 @@
             <div class="row form-group">
               <label class="col-xs-3">Relay Pin</label> 
               <span class="col-xs-9">
-                <select class="form-control input-sm" style="display:inline;max-width:150px" id="gpiorly">
+                <select class="form-control input-sm" style="display:inline;max-width:150px" id="gpiorly" disabled>
                   <option value="0">GPIO-0</option>
                   <option value="2">GPIO-2</option>
                   <option selected="selected" value="4">GPIO-4</option>
                   <option value="5">GPIO-5</option>
                   <option value="15">GPIO-15</option>
-                  <option value="16">GPIO-16</option>
+                  
                 </select>
                 <button id="testb" type="button" class="btn btn-primary btn-xs" onclick="testRelay()">Test</button>
               </span>
@@ -205,9 +218,15 @@
             <div class="row form-group">
               <label class="col-xs-3">Activate Time</label> 
               <span class="col-xs-9">
-              <input class="form-control input-sm" placeholder="in Microsecond" style="display:inline;max-width:185px" id="delay" type="text" name="hightime">
+              <input class="form-control input-sm" placeholder="in milliseconds" style="display:inline;max-width:185px" id="delay" type="text" name="hightime">
               </span>
             </div>
+            <div class="row form-group">
+              <label class="col-xs-3">Guard Time</label> 
+              <span class="col-xs-9">
+              <input class="form-control input-sm" placeholder="in milliseconds" style="display:inline;max-width:185px" id="guardtime" type="text" name="guardtime">
+              </span>
+            </div>            
             
           </div>
         </div>
@@ -222,14 +241,21 @@
               </span>
               <br>
             </div>
-                        <div class="row form-group">
+            <div class="row form-group">
               <label class="col-xs-3">Host Name</label> 
               <span class="col-xs-9">
               <input class="form-control input-sm" placeholder="Hostname" style="display:inline;max-width:185px" id="hostname" type="text">
               </span>
               <br>
             </div>
-          </div>
+            <div class="row form-group">
+              <label class="col-xs-3">Vcard Password</label> 
+              <span class="col-xs-9">
+              <input class="form-control input-sm" placeholder="vcard password" style="display:inline;max-width:185px" id="vcardpwd" type="text">
+              </span>
+              <br>
+            </div>
+          </div>          
           <div class="col-sm-6">
             <legend>Time Settings</legend>
             <h6 class="text-muted">Small differences between device time and local time can be ignored. Please see <a href="https://github.com/omersiar/esp-rfid#time">documentation</a> for additional information.</h6>
@@ -243,6 +269,11 @@
               <span id="rtc" class="col-xs-9">
               </span>
             </div>
+            <div class="row form-group">
+              <label class="col-xs-3">Last sync</label> 
+              <span id="lastsync" class="col-xs-9">
+              </span>
+            </div>            
             <div class="row form-group">
               <div class="col-xs-3"><button onclick="syncBrowserTime()" class="btn btn-link btn-sm">Sync Browser Time to Device</button></div>
               </div>
@@ -279,7 +310,7 @@
                   <option value="-1">(GMT -1:00 hour) Azores, Cape Verde Islands</option>
                   <option value="0">(GMT) Western Europe Time, London, Lisbon, Casablanca</option>
                   <option value="1">(GMT +1:00 hour) Brussels, Copenhagen, Madrid, Paris</option>
-                  <option value="2">(GMT +2:00) Kaliningrad, South Africa</option>
+                  <option value="2">(GMT +2:00) Sofia, Kaliningrad, South Africa</option>
                   <option value="3">(GMT +3:00) Baghdad, Riyadh, Moscow, St. Petersburg</option>
                   <option value="3.5">(GMT +3:30) Tehran</option>
                   <option value="4">(GMT +4:00) Abu Dhabi, Muscat, Baku, Tbilisi</option>
@@ -299,6 +330,7 @@
               </span>
               <br>
             </div>
+
           </div>
         </div>
         <hr>
@@ -329,24 +361,24 @@
             </div>
             <br>
             <div id="restoremodal" class="modal fade" role="dialog">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">Please wait while restoring user data...</h4>
-      </div>
-      <div class="modal-body">
-                    <div id="pbar" class="progress">
-              <div id="dynamic" class="progress-bar progress-bar-primary progress-bar-striped active">Restoring...</div>
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Please wait while restoring user data...</h4>
+                  </div>
+                  <div class="modal-body">
+                        <div id="pbar" class="progress">
+                          <div id="dynamic" class="progress-bar progress-bar-primary progress-bar-striped active">Restoring...</div>
+                        </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" id="restoreclose" style="display:none;" class="btn btn-default" data-dismiss="modal">Close</button>
+                  </div>
+                </div>
+            
+              </div>
             </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="restoreclose" style="display:none;" class="btn btn-default" data-dismiss="modal">Close</button>
-      </div>
-    </div>
-
-  </div>
-</div>
 
           </div>
           <div class="col-sm-6">

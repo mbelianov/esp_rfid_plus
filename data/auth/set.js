@@ -16,12 +16,15 @@ function listCONF(obj) {
   document.getElementById("gain").value = obj.rfidgain;
   document.getElementById("gpiorly").value = obj.rpin;
   document.getElementById("delay").value = obj.rtime;
+  document.getElementById("guardtime").value = obj.gtime;
   document.getElementById("adminpwd").value = obj.adminpwd;
+  document.getElementById("vcardpwd").value = obj.vcardpwd;
   document.getElementById("typerly").value = obj.rtype;
   document.getElementById("ntpserver").value = obj.ntpserver;
   document.getElementById("intervals").value = obj.ntpinterval;
   document.getElementById("DropDownTimezone").value = obj.timezone;
   document.getElementById("hostname").value = obj.hostnm;
+
   if (obj.wmode === "1") {
     document.getElementById("wmodeap").checked = true;
   } else {
@@ -126,11 +129,14 @@ function saveConf() {
   datatosend.rtype = document.getElementById("typerly").value;
   datatosend.rpin = document.getElementById("gpiorly").value;
   datatosend.rtime = document.getElementById("delay").value;
+  datatosend.gtime = document.getElementById("guardtime").value;
   datatosend.ntpserver = document.getElementById("ntpserver").value;
   datatosend.ntpinterval = document.getElementById("intervals").value;
   datatosend.timezone = document.getElementById("DropDownTimezone").value;
   datatosend.hostnm = document.getElementById("hostname").value;
+  datatosend.vcardpwd = document.getElementById("vcardpwd").value;
   datatosend.adminpwd = a;
+
   websock.send(JSON.stringify(datatosend));
   location.reload();
 }
@@ -258,7 +264,10 @@ function refreshStats() {
 
 function listStats(obj) {
   document.getElementById("chip").innerHTML = obj.chipid;
+  document.getElementById("firmware").innerHTML = obj.firmware;
+  document.getElementById("compile_time").innerHTML = obj.compile_time;
   document.getElementById("cpu").innerHTML = obj.cpu + " Mhz";
+  document.getElementById("uptime").innerHTML = obj.uptime;
   document.getElementById("heap").innerHTML = obj.heap + " Bytes";
   document.getElementById("heap").style.width = (obj.heap * 100) / 81920 + "%";
   colorStatusbar(document.getElementById("heap"));
@@ -309,6 +318,10 @@ function start() {
       listCONF(obj);
     } else if (obj.command === "gettime") {
       utcSeconds = obj.epoch;
+      var t = new Date(0); // The 0 there is the key, which sets the date to the epoch
+      t.setUTCSeconds(obj.lastsync);
+      var d = t.toUTCString();
+      document.getElementById("lastsync").innerHTML = d + " (0 = never)";
     } else if (obj.command === "userlist") {
             haspages = obj.haspages;
       builduserdata(obj);

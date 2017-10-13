@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.0alpha] - 2014-10-10
 First prodcution release
+#### Added
+- support fot authenticated firmware update
+- configurable authentication of virtual card access
 
 
 ## [0.5] - 2014-10-10
